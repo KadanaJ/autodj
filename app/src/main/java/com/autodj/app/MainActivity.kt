@@ -33,7 +33,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.autodj.player.DjController
 import com.autodj.ui.AutoDjTheme
+import com.autodj.ui.DjScreen
 import com.autodj.ui.HomeScreen
 import com.autodj.ui.LibraryFilter
 import com.autodj.ui.LibraryScreen
@@ -72,16 +74,41 @@ private fun AppRoot(vm: MainViewModel = viewModel()) {
     val scan by vm.scan.collectAsState()
     val player by vm.player.state.collectAsState()
     val busy by vm.busy.collectAsState()
+    val dj by DjController.state.collectAsState()
     var libraryFilter by remember { mutableStateOf<LibraryFilter?>(null) }
     var openTrackId by remember { mutableStateOf<Long?>(null) }
+    var showDj by remember { mutableStateOf(false) }
+
+    fun startDj(id: Long?) {
+        vm.player.stop()
+        DjController.start(context, id)
+        openTrackId = null
+        showDj = true
+    }
 
     val filter = libraryFilter
-    if (filter == null) {
+    if (showDj) {
+        BackHandler { showDj = false }
+        DjScreen(
+            state = dj,
+            onBack = { showDj = false },
+            onToggle = DjController::togglePause,
+            onSkip = { DjController.skip() },
+            onJumpToMix = { DjController.jumpToMix() },
+            onStop = {
+                DjController.stop()
+                showDj = false
+            },
+        )
+    } else if (filter == null) {
         HomeScreen(
             tracks = tracks,
             scan = scan,
+            djActive = dj.active,
             onScan = vm::startScan,
             onOpenLibrary = { pace -> libraryFilter = pace?.let { LibraryFilter.ByPace(it) } ?: LibraryFilter.All },
+            onStartDj = { startDj(null) },
+            onOpenDj = { showDj = true },
         )
     } else {
         BackHandler { libraryFilter = null }
@@ -104,10 +131,14 @@ private fun AppRoot(vm: MainViewModel = viewModel()) {
                 openTrackId = null
                 vm.player.stop()
             },
-            onPlay = { vm.player.play(open, it) },
+            onPlay = {
+                DjController.pause()
+                vm.player.play(open, it)
+            },
             onStop = vm.player::stop,
             onClicks = vm.player::setClicks,
             onReanalyze = { vm.reanalyze(open, it) },
+            onDjFromHere = { startDj(open.id) },
         )
     }
 }

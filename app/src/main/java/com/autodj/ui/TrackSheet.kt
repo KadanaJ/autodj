@@ -64,6 +64,7 @@ fun TrackSheet(
     onStop: () -> Unit,
     onClicks: (Boolean) -> Unit,
     onReanalyze: (bpmHint: Double?) -> Unit,
+    onDjFromHere: () -> Unit,
 ) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val isThis = player.trackId == track.id
@@ -122,6 +123,16 @@ fun TrackSheet(
                     track.energy?.let { EnergyDots(it) }
                 }
                 InfoTile("Pace", track.pace?.label ?: "—", Modifier.weight(1f), color = Palette.pace(track.pace))
+            }
+
+            if (track.isAnalyzed) {
+                Spacer(Modifier.height(18.dp))
+                Button(
+                    onClick = onDjFromHere,
+                    enabled = !busy,
+                    colors = ButtonDefaults.buttonColors(containerColor = Palette.Accent),
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("DJ from this song") }
             }
 
             // Preview

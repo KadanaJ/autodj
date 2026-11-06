@@ -205,6 +205,37 @@ class LibraryRepository private constructor(private val context: Context) {
         db.writableDatabase.update("tracks", v, "id=?", arrayOf(id.toString()))
     }
 
+    /** Engine-ready descriptions (with per-beat energy) of all analysed songs. */
+    suspend fun loadTrackInfos(): List<com.autodj.engine.TrackInfo> = withContext(Dispatchers.IO) {
+        val out = ArrayList<com.autodj.engine.TrackInfo>()
+        db.readableDatabase.rawQuery(
+            "SELECT id,title,artist,duration_ms,bpm,first_beat,downbeat_offset,bpm_confidence,loudness_db,beat_energy,key_index,energy " +
+                "FROM tracks WHERE status=?",
+            arrayOf(Track.STATUS_DONE.toString()),
+        ).use { c ->
+            while (c.moveToNext()) {
+                val blob = if (c.isNull(9)) ByteArray(0) else c.getBlob(9)
+                val fb = ByteBuffer.wrap(blob).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+                val energy = FloatArray(fb.remaining()).also { fb.get(it) }
+                out += com.autodj.engine.TrackInfo(
+                    id = c.getLong(0),
+                    title = c.getString(1),
+                    artist = c.getString(2),
+                    durationSec = c.getLong(3) / 1000.0,
+                    bpm = c.doubleOrNull(4),
+                    firstBeat = c.doubleOrNull(5),
+                    downbeatOffset = c.getInt(6),
+                    beatConfidence = c.getDouble(7),
+                    loudnessDb = c.doubleOrNull(8),
+                    blockEnergy = energy,
+                    keyIndex = if (c.isNull(10)) null else c.getInt(10),
+                    energy = c.doubleOrNull(11),
+                )
+            }
+        }
+        out
+    }
+
     companion object {
         @Volatile
         private var instance: LibraryRepository? = null

@@ -3,9 +3,9 @@
 Personal Android app that automatically DJ-mixes your local music files at the pace you choose.
 
 ## Status
-- **Step 1 (this build):** library scan; per-song BPM, beat grid, key (Camelot) and energy analysis;
+- **Step 1:** library scan; per-song BPM, beat grid, key (Camelot) and energy analysis;
   pace presets (Chill / Cruise / Workout / Peak); song preview with beat clicks; tempo fixes (×2, ÷2, tap tempo).
-- Step 2: two-deck engine with beatmatched blends (tempo nudged at most ~±6%, pitch preserved).
+- **Step 2 (this build):** two-deck mixing engine — phrase-aligned, beatmatched 32-beat blends with bass swap, tempo nudged at most ±6% with pitch preserved and glided back afterwards, live beat fine-tuning, crossfades for songs without a steady beat; background playback with lock-screen controls.
 - Step 3: pace presets + fine-tune, shuffle-by-pace, automatic next-song choice.
 - Step 4: polish.
 

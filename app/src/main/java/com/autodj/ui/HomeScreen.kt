@@ -27,7 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,8 +57,11 @@ import com.autodj.data.Track
 fun HomeScreen(
     tracks: List<Track>,
     scan: ScanInfo,
+    djActive: Boolean,
     onScan: () -> Unit,
     onOpenLibrary: (Pace?) -> Unit,
+    onStartDj: () -> Unit,
+    onOpenDj: () -> Unit,
 ) {
     val analyzed = tracks.count { it.isAnalyzed }
     val steady = tracks.count { it.hasSteadyBeat }
@@ -96,18 +99,26 @@ fun HomeScreen(
 
             BigButton(
                 scan = scan,
-                hasLibrary = tracks.isNotEmpty() && analyzed > 0,
-                onClick = { if (scan.running) Unit else if (analyzed == 0) onScan() else onOpenLibrary(null) },
+                hasLibrary = steady > 0,
+                djActive = djActive,
+                onClick = {
+                    when {
+                        djActive -> onOpenDj()
+                        steady > 0 -> onStartDj()
+                        !scan.running -> onScan()
+                    }
+                },
             )
             Spacer(Modifier.height(24.dp))
             val caption = when {
                 scan.running && scan.total > 0 -> "Finding the BPM, key and energy of every song.\nYou can leave the app — it keeps going."
                 scan.running -> "Looking for music on your phone…"
                 tracks.isEmpty() -> "Tap to find the music on your phone"
-                else -> "$steady songs with a steady beat · tap to browse"
+                djActive -> "Tap to see what's mixing"
+                else -> "$steady songs ready to mix"
             }
             Text(caption, color = Palette.TextDim, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
-            if (!scan.running && tracks.isNotEmpty()) {
+            if (!scan.running && tracks.isNotEmpty() && !djActive) {
                 TextButton(onClick = onScan) { Text("Rescan library", color = Palette.AccentGlow) }
             }
 
@@ -147,7 +158,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun BigButton(scan: ScanInfo, hasLibrary: Boolean, onClick: () -> Unit) {
+private fun BigButton(scan: ScanInfo, hasLibrary: Boolean, djActive: Boolean, onClick: () -> Unit) {
     val pulse = rememberInfiniteTransition(label = "pulse")
     val ring by pulse.animateFloat(
         initialValue = 0f,
@@ -157,7 +168,7 @@ private fun BigButton(scan: ScanInfo, hasLibrary: Boolean, onClick: () -> Unit) 
     )
     val breathe by pulse.animateFloat(
         initialValue = 1f,
-        targetValue = if (scan.running) 1.04f else 1.015f,
+        targetValue = if (scan.running || djActive) 1.04f else 1.015f,
         animationSpec = infiniteRepeatable(tween(1100), RepeatMode.Reverse),
         label = "breathe",
     )
@@ -173,7 +184,7 @@ private fun BigButton(scan: ScanInfo, hasLibrary: Boolean, onClick: () -> Unit) 
             for (k in 0 until 2) {
                 val p = (ring + k * 0.5f) % 1f
                 drawCircle(
-                    color = Palette.AccentGlow.copy(alpha = (1 - p) * if (scan.running) 0.35f else 0.14f),
+                    color = Palette.AccentGlow.copy(alpha = (1 - p) * if (scan.running || djActive) 0.35f else 0.14f),
                     radius = base + extra * p,
                     style = Stroke(width = 2.dp.toPx()),
                 )
@@ -206,6 +217,10 @@ private fun BigButton(scan: ScanInfo, hasLibrary: Boolean, onClick: () -> Unit) 
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 when {
+                    djActive -> {
+                        Icon(Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(64.dp))
+                        Text("Mixing", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                    }
                     scan.running && scan.total > 0 -> {
                         Text("${(fraction * 100).toInt()}%", color = Color.White, fontSize = 52.sp, fontWeight = FontWeight.Bold)
                         Text("${scan.done} / ${scan.total}", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelLarge)
@@ -215,8 +230,8 @@ private fun BigButton(scan: ScanInfo, hasLibrary: Boolean, onClick: () -> Unit) 
                         Text("Scanning", color = Color.White, style = MaterialTheme.typography.titleMedium)
                     }
                     hasLibrary -> {
-                        Icon(Icons.Filled.Check, null, tint = Color.White, modifier = Modifier.size(64.dp))
-                        Text("Library ready", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                        Icon(Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(84.dp))
+                        Text("Start DJ", color = Color.White, style = MaterialTheme.typography.titleMedium)
                     }
                     else -> {
                         Icon(Icons.Filled.Search, null, tint = Color.White, modifier = Modifier.size(64.dp))
